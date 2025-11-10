@@ -1,9 +1,8 @@
-import 'reflect-metadata';
 import { DataSource } from 'typeorm';
+import path from 'path';
 import * as dotenv from 'dotenv';
-import { User } from './entities/user.entity';
-
 dotenv.config();
+const isProd = process.env.NODE_ENV === 'production';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -12,8 +11,10 @@ export const AppDataSource = new DataSource({
   username: process.env.POSTGRES_USER,
   password: process.env.POSTGRES_PASSWORD,
   database: process.env.POSTGRES_DB,
-  entities: [User],
-  migrations: ['src/migrations/*{.ts,.js}'],
+  entities: [path.resolve(__dirname, './entities/*.{js, ts}')],
+  migrations: [path.resolve(__dirname, './migrations/.{js, ts}')],
   synchronize: false,
-  logging: true,
+  logging: process.env.NODE_ENV !== 'production',
 });
+
+console.log('Migration files:', AppDataSource.options.migrations);
