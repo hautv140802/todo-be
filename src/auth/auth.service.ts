@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { RegisterDto } from './dto/register-dto';
 import * as bcrypt from 'bcrypt';
 import { VALIDATION_MESSAGES } from '@/common/constants/validation-messages';
+import { ResponseMessage } from '@/common/decorators/response-message.decorator';
 @Injectable()
 export class AuthService {
   constructor(
