@@ -34,7 +34,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     response.status(status).json({
       success: false,
-      statusCode: status,
+      status_code: status,
       message,
       timestamp: new Date().toISOString(),
       path: request.url,

@@ -33,7 +33,7 @@ export class TransformInterceptor<T>
           ) || 'Request successful';
 
         return {
-          statusCode: response.statusCode,
+          status_code: response.statusCode,
           message,
           data,
           timestamp: new Date().toISOString(),
