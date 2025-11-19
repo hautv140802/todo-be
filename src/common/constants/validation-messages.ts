@@ -8,4 +8,6 @@ export const VALIDATION_MESSAGES = {
   EMAIL_USED: 'The email has already been used.',
   PASSWORD_MIN_LENGTH: (min: number) =>
     `Password must be at least ${min} characters long.`,
+
+  EMAIL_OR_PASSWORD_INCORRECT: 'Email or Password incorrect',
 };
