@@ -19,6 +19,7 @@ export class AuthService {
     private usersRepository: Repository<User>,
     private jwtService: JwtService,
   ) {}
+
   async register(registerDto: RegisterDto) {
     const { full_name, email, password } = registerDto;
     const existingUser = await this.usersRepository.findOne({
@@ -51,6 +52,28 @@ export class AuthService {
     }
   }
 
+  async getToken(user_id: number, email: string) {
+    const [at, rt] = await Promise.all([
+      this.jwtService.signAsync(
+        { sub: user_id, email },
+        { secret: process.env.AT_SECRET, expiresIn: '15m' },
+      ),
+      this.jwtService.signAsync(
+        { sub: user_id, email },
+        { secret: process.env.RT_SECRET, expiresIn: '7d' },
+      ),
+    ]);
+
+    return { accessToken: at, refreshToken: rt };
+  }
+
+  async updateRefreshToken(userId: number, refreshToken: string) {
+    const hashRt = await bcrypt.hash(refreshToken, 10);
+    await this.usersRepository.update(userId, {
+      refresh_token: hashRt,
+    });
+  }
+
   async login(loginDto: LoginDto) {
     const user = await this.usersRepository.findOne({
       where: {
@@ -66,13 +89,19 @@ export class AuthService {
         VALIDATION_MESSAGES.EMAIL_OR_PASSWORD_INCORRECT,
       );
 
-    const payload = { email: user.email, sub: user.id };
+    const { accessToken, refreshToken } = await this.getToken(
+      user.id,
+      user.email,
+    );
+
+    await this.updateRefreshToken(user?.id, refreshToken);
 
     return {
       id: user.id,
       full_name: user.full_name,
       email: user.email,
-      access_token: this.jwtService.sign(payload),
+      access_token: accessToken,
+      refresh_token: refreshToken,
     };
   }
 }
