@@ -13,4 +13,7 @@ export class User {
 
   @Column({ select: false })
   password: string;
+
+  @Column({ nullable: true })
+  refresh_token: string;
 }
