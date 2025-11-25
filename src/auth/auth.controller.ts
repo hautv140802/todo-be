@@ -1,8 +1,18 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register-dto';
 import { ResponseMessage } from '@/common/decorators/response-message.decorator';
 import { LoginDto } from './dto/login-dto';
+import { RtGuard } from './guards/rt.guard';
+import { GetCurrentUser } from '@/common/decorators/get-current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -20,8 +30,14 @@ export class AuthController {
     return this.authService.login(loginDto);
   }
 
-  // @Post('refresh-token')
-  // @ResponseMessage('Refresh Token Successfully!')
-  // @HttpCode(HttpStatus.OK)
-  // async refreshToken() {}
+  @UseGuards(RtGuard)
+  @Post('refresh-token')
+  @ResponseMessage('Refresh Token Successfully!')
+  @HttpCode(HttpStatus.OK)
+  async refreshToken(
+    @GetCurrentUser('sub') userId: number,
+    @GetCurrentUser('refreshToken') refreshToken: string,
+  ) {
+    return this.authService.refreshToken(userId, refreshToken);
+  }
 }

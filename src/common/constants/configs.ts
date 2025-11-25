@@ -13,4 +13,8 @@ export const configs = {
     secret: process.env.JWT_SECRET || 'secret-key',
     expire: process.env.JWT_EXPIRE || '1d',
   },
+  rt: {
+    secret: process.env.RT_SECRET || 'secret-key',
+    expire: process.env.RT_EXPIRE || '7d',
+  },
 };

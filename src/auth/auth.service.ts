@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
@@ -12,6 +13,7 @@ import * as bcrypt from 'bcrypt';
 import { VALIDATION_MESSAGES } from '@/common/constants/validation-messages';
 import { LoginDto } from './dto/login-dto';
 import { JwtService } from '@nestjs/jwt';
+import { configs } from '@/common/constants/configs';
 @Injectable()
 export class AuthService {
   constructor(
@@ -52,23 +54,24 @@ export class AuthService {
     }
   }
 
-  async getToken(user_id: number, email: string) {
+  async getToken(userId: number, email: string) {
     const [at, rt] = await Promise.all([
       this.jwtService.signAsync(
-        { sub: user_id, email },
-        { secret: process.env.AT_SECRET, expiresIn: '15m' },
+        { sub: userId, email },
+        { secret: configs.jwt.secret, expiresIn: configs.jwt.expire as any },
       ),
       this.jwtService.signAsync(
-        { sub: user_id, email },
-        { secret: process.env.RT_SECRET, expiresIn: '7d' },
+        { sub: userId, email },
+        { secret: configs.rt.secret, expiresIn: configs.rt.expire as any },
       ),
     ]);
 
     return { accessToken: at, refreshToken: rt };
   }
 
-  async updateRefreshToken(userId: number, refreshToken: string) {
-    const hashRt = await bcrypt.hash(refreshToken, 10);
+  async updateRefreshToken(userId: number, refreshToken: string | null) {
+    const salt = await bcrypt.genSalt(10);
+    const hashRt = refreshToken ? await bcrypt.hash(refreshToken, salt) : null;
     await this.usersRepository.update(userId, {
       refresh_token: hashRt,
     });
@@ -100,6 +103,33 @@ export class AuthService {
       id: user.id,
       full_name: user.full_name,
       email: user.email,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    };
+  }
+
+  async refreshToken(userId: number, currentRefresh: string) {
+    const user = await this.usersRepository.findOne({ where: { id: userId } });
+
+    if (!user || !user.refresh_token) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    const isMatchRT = await bcrypt.compare(currentRefresh, user?.refresh_token);
+
+    if (!isMatchRT) {
+      await this.updateRefreshToken(user.id, null);
+      throw new ForbiddenException('Access Denied: Refresh Token invalid');
+    }
+
+    const { accessToken, refreshToken } = await this.getToken(
+      user.id,
+      user.email,
+    );
+
+    await this.updateRefreshToken(user?.id, refreshToken);
+
+    return {
       access_token: accessToken,
       refresh_token: refreshToken,
     };
