@@ -9,11 +9,17 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { User } from '@/entities/user.entity';
 import { Repository } from 'typeorm';
 import { RegisterDto } from './dto/register-dto';
-import * as bcrypt from 'bcrypt';
 import { VALIDATION_MESSAGES } from '@/common/constants/validation-messages';
 import { LoginDto } from './dto/login-dto';
 import { JwtService } from '@nestjs/jwt';
 import { configs } from '@/common/constants/configs';
+import { hash, Options, argon2id, verify } from 'argon2';
+const ARGON2_OPTIONS: Options = {
+  type: argon2id,
+  memoryCost: 2 ** 16,
+  timeCost: 4,
+  parallelism: 1,
+};
 @Injectable()
 export class AuthService {
   constructor(
@@ -32,8 +38,7 @@ export class AuthService {
       throw new ConflictException(VALIDATION_MESSAGES.EMAIL_USED);
     }
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    const hashedPassword = await hash(password, ARGON2_OPTIONS);
 
     const newUser = this.usersRepository.create({
       full_name,
@@ -44,7 +49,7 @@ export class AuthService {
     try {
       const savedUser = await this.usersRepository.save(newUser);
 
-      const { password, ...result } = savedUser;
+      const { password, refresh_token, ...result } = savedUser;
       return result as Omit<User, 'password'>;
     } catch (error) {
       console.error(error);
@@ -70,10 +75,12 @@ export class AuthService {
   }
 
   async updateRefreshToken(userId: number, refreshToken: string | null) {
-    const salt = await bcrypt.genSalt(10);
-    const hashRt = refreshToken ? await bcrypt.hash(refreshToken, salt) : null;
+    let hashRt: string | null = null;
+    if (refreshToken) {
+      hashRt = await hash(refreshToken, ARGON2_OPTIONS);
+    }
     await this.usersRepository.update(userId, {
-      refresh_token: hashRt,
+      refresh_token: hashRt || undefined,
     });
   }
 
@@ -85,7 +92,11 @@ export class AuthService {
       select: ['id', 'email', 'full_name', 'password'],
     });
 
-    const isMatch = await bcrypt.compare(loginDto.password, user?.password);
+    if (!user?.password) {
+      throw new ForbiddenException('Access Denied');
+    }
+
+    const isMatch = await verify(user?.password, loginDto.password);
 
     if (!user || !isMatch)
       throw new UnauthorizedException(
@@ -115,10 +126,9 @@ export class AuthService {
       throw new ForbiddenException('Access Denied');
     }
 
-    const isMatchRT = await bcrypt.compare(currentRefresh, user?.refresh_token);
+    const isMatchRT = await verify(user?.refresh_token, currentRefresh);
 
     if (!isMatchRT) {
-      await this.updateRefreshToken(user.id, null);
       throw new ForbiddenException('Access Denied: Refresh Token invalid');
     }
 
