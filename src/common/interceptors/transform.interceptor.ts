@@ -9,8 +9,6 @@ import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Response } from '../interfaces/response.interface';
-import * as changeCase from 'change-case';
-import { convertToSnakeKeys } from '../helpers/convertToSnakeKeys';
 
 @Injectable()
 export class TransformInterceptor<T>
@@ -24,23 +22,22 @@ export class TransformInterceptor<T>
   ): Observable<Response<T>> {
     return next.handle().pipe(
       map((data) => {
+        // Retrieve the response object to get the status code
         const response = context.switchToHttp().getResponse();
 
+        // Retrieve custom message from metadata, fallback to default
         const message =
           this.reflector.get<string>(
             'response_message',
             context.getHandler(),
           ) || 'Request successful';
-        const plainData = JSON.parse(JSON.stringify(data));
 
-        const customData = {
-          statusCode: response.statusCode,
+        return {
+          status_code: response.statusCode,
           message,
-          data: plainData,
+          data,
           timestamp: new Date().toISOString(),
         };
-
-        return convertToSnakeKeys(customData);
       }),
     );
   }
