@@ -140,8 +140,8 @@ export class AuthService {
     await this.updateRefreshToken(user?.id, refreshToken);
 
     return {
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
     };
   }
 }
