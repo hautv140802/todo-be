@@ -30,6 +30,8 @@
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/typeorm": "^11.0.0",
     "argon2": "^0.44.0",
+    "case-converter": "^1.0.1",
+    "change-case": "^5.4.4",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.2",
     "passport": "^0.7.0",

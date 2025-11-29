@@ -29,7 +29,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { full_name, email, password } = registerDto;
+    const { fullName, email, password } = registerDto;
     const existingUser = await this.usersRepository.findOne({
       where: { email },
     });
@@ -41,7 +41,7 @@ export class AuthService {
     const hashedPassword = await hash(password, ARGON2_OPTIONS);
 
     const newUser = this.usersRepository.create({
-      full_name,
+      fullName,
       email,
       password: hashedPassword,
     });
@@ -49,7 +49,7 @@ export class AuthService {
     try {
       const savedUser = await this.usersRepository.save(newUser);
 
-      const { password, refresh_token, ...result } = savedUser;
+      const { password, refreshToken, ...result } = savedUser;
       return result as Omit<User, 'password'>;
     } catch (error) {
       console.error(error);
@@ -80,7 +80,7 @@ export class AuthService {
       hashRt = await hash(refreshToken, ARGON2_OPTIONS);
     }
     await this.usersRepository.update(userId, {
-      refresh_token: hashRt || undefined,
+      refreshToken: hashRt || undefined,
     });
   }
 
@@ -89,7 +89,7 @@ export class AuthService {
       where: {
         email: loginDto.email,
       },
-      select: ['id', 'email', 'full_name', 'password'],
+      select: ['id', 'email', 'fullName', 'password'],
     });
 
     if (!user?.password) {
@@ -112,21 +112,21 @@ export class AuthService {
 
     return {
       id: user.id,
-      full_name: user.full_name,
+      fullName: user.fullName,
       email: user.email,
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      accessToken: accessToken,
+      refreshToken: refreshToken,
     };
   }
 
   async refreshToken(userId: number, currentRefresh: string) {
     const user = await this.usersRepository.findOne({ where: { id: userId } });
 
-    if (!user || !user.refresh_token) {
+    if (!user || !user.refreshToken) {
       throw new ForbiddenException('Access Denied');
     }
 
-    const isMatchRT = await verify(user?.refresh_token, currentRefresh);
+    const isMatchRT = await verify(user?.refreshToken, currentRefresh);
 
     if (!isMatchRT) {
       throw new ForbiddenException('Access Denied: Refresh Token invalid');
